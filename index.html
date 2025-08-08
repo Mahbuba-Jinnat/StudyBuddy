@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>StudyBuddy — Timetable + Flashcards</title>
+<style>
+  :root{--bg:#f6f6f7;--card:#fff;--muted:#6b7280;--text:#111827;--accent:#111827;--line:#e5e7eb}
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--text)}
+  .wrap{max-width:1100px;margin:0 auto;padding:20px}
+  h1{font-weight:800;font-size:24px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px}
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+  .tab{padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;font-weight:600}
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid{grid-template-columns:1fr 2fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 1px 0 rgba(0,0,0,.03)}
+  label{font-size:12px;color:var(--muted);display:block;margin:6px 0 4px}
+  input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  button{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .row{display:flex;gap:8px;align-items:center}
+  .row.wrap{flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12px}
+  .pill{padding:4px 8px;border-radius:999px;background:#111827;color:#fff;font-size:11px}
+  .list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  .item{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fafafa;display:flex;justify-content:space-between;gap:10px}
+  .muted{color:var(--muted)}
+  .right{margin-left:auto}
+  .danger{color:#b91c1c}
+  .stack{display:grid;gap:10px}
+  .week{display:grid;grid-template-columns:repeat(1,1fr);gap:10px}
+  @media(min-width:900px){.week{grid-template-columns:repeat(7,1fr)}}
+  .day{border:1px solid var(--line);border-radius:12px;padding:8px;background:#fff}
+  .day h4{margin:2px 0 8px;font-size:13px}
+  .bar{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden}
+  .bar > span{display:block;height:100%}
+  .center{text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>StudyBuddy — Timetable + Flashcards</h1>
+    <div class="sub">Plan your week, focus with a timer, and remember more with spaced repetition. All data stays on your device (localStorage).</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="timetable">Timetable</button>
+    <button class="tab" data-tab="flashcards">Flashcards</button>
+    <button class="tab" data-tab="session">Study Session</button>
+  </nav>
+
+  <section id="timetable" class="view">
+    <div class="grid">
+      <div class="card stack">
+        <h3 style="margin:0">Subjects</h3>
+        <div class="row">
+          <input id="subject-name" placeholder="Add subject (e.g., Physics)" />
+          <input id="subject-color" type="color" value="#3b82f6" style="width:56px;padding:4px" />
+          <button class="primary" id="add-subject">Add</button>
+        </div>
+        <div id="subjects" class="row wrap"></div>
+      </div>
+
+      <div class="card stack">
+        <h3 style="margin:0">Add Study Block</h3>
+        <div class="row">
+          <select id="block-day"></select>
+          <input id="block-start" type="time" value="09:00" />
+          <input id="block-end" type="time" value="10:00" />
+        </div>
+        <div class="row">
+          <select id="block-subject"></select>
+          <input id="block-note" placeholder="Topic / goal (e.g., Momentum past papers)" />
+          <button class="primary" id="add-block">Add Block</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 style="margin:0 0 10px">Weekly Planner</h3>
+      <div class="week" id="week"></div>
+    </div>
+  </section>
+
+  <section id="flashcards" class="view" hidden>
+    <div class="grid">
+      <div class="card stack">
+        <h3 style="margin:0">New Flashcard</h3>
+        <div class="row">
+          <select id="card-subject"></select>
+          <input id="card-front" placeholder="Question / Term (front)" />
+        </div>
+        <textarea id="card-back" rows="3" placeholder="Answer / Definition (back)"></textarea>
+        <div class="row">
+          <button class="primary" id="add-card">Add Card</button>
+          <span class="muted">First review will be scheduled for today.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Your Deck</h3>
+          <div class="row">
+            <button id="export-data">Export</button>
+            <label class="chip">Import <input id="import-file" type="file" accept="application/json" hidden></label>
+          </div>
+        </div>
+        <div id="deck" class="list" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="session" class="view" hidden>
+    <div class="grid">
+      <div class="card">
+        <h3 style="margin:0 0 8px">Pomodoro</h3>
+        <div class="row">
+          <label>Focus (min)<input id="pomo-focus" type="number" min="1" value="25"></label>
+          <label>Break (min)<input id="pomo-break" type="number" min="1" value="5"></label>
+          <button id="pomo-start" class="primary">Start</button>
+          <button id="pomo-stop">Stop</button>
+          <div id="pomo-status" class="pill right">idle</div>
+        </div>
+        <div class="bar" style="margin-top:10px"><span id="pomo-bar" style="width:0%"></span></div>
+        <div class="center muted" id="pomo-time" style="margin-top:6px">00:00</div>
+      </div>
+
+      <div class="card stack">
+        <h3 style="margin:0">Review (Spaced Repetition)</h3>
+        <div id="due-count" class="muted">Loading…</div>
+        <div id="review-area" class="stack" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="center muted" style="margin-top:20px;font-size:12px">
+    Tip: Export regularly to back up your data or move it to another device.
+  </footer>
+</div>
+
+<script>
+(function(){
+  const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const DEFAULT_INTERVALS = [1,2,4,7,15,30];
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const today = () => new Date().toISOString().slice(0,10);
+  const uid = () => Math.random().toString(36).slice(2,9);
+  const load = (k, f) => {try{const r = localStorage.getItem(k);return r?JSON.parse(r):f}catch{return f}};
+  const save = (k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+  // state
+  let subjects = load('sb_subjects', [
+    {id:uid(), name:'Physics', color:'#22c55e'},
+    {id:uid(), name:'Maths', color:'#3b82f6'}
+  ]);
+  let blocks = load('sb_blocks', []);
+  let cards = load('sb_cards', []);
+  let settings = load('sb_settings', {intervals: DEFAULT_INTERVALS, pomodoro:{focus:25, break:5}});
+
+  // tabs
+  $$('.tab').forEach(btn=>btn.onclick=()=>{
+    $$('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    $$('.view').forEach(v=>v.hidden=true);
+    document.getElementById(btn.dataset.tab).hidden=false;
+    if(btn.dataset.tab==='session') renderReview();
+  });
+
+  // populate selects
+  function refreshSubjectUI(){
+    // chips
+    const box = $('#subjects'); box.innerHTML='';
+    subjects.forEach(s=>{
+      const chip = document.createElement('span');
+      chip.className='chip';
+      chip.innerHTML=`<span style="width:10px;height:10px;border-radius:999px;background:${s.color};display:inline-block"></span>${s.name}`;
+      box.appendChild(chip);
+    });
+
+    // selects
+    const selSub = $('#block-subject'); selSub.innerHTML='';
+    subjects.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;selSub.appendChild(o)});
+    const cardSel = $('#card-subject'); cardSel.innerHTML='';
+    subjects.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;cardSel.appendChild(o)});
+  }
+
+  function refreshDays(){
+    const daySel = $('#block-day'); daySel.innerHTML='';
+    DAYS.forEach((d,i)=>{const o=document.createElement('option');o.value=i;o.textContent=d;daySel.appendChild(o)});
+  }
+
+  function renderWeek(){
+    const container = $('#week'); container.innerHTML='';
+    DAYS.forEach((d,i)=>{
+      const div = document.createElement('div'); div.className='day';
+      div.innerHTML = `<h4>${d}</h4>`;
+      const ul = document.createElement('ul'); ul.className='list';
+      blocks.filter(b=>b.day===i).sort((a,b)=>a.start.localeCompare(b.start)).forEach(b=>{
+        const s = subjects.find(x=>x.id===b.subjectId);
+        const li = document.createElement('li'); li.className='item';
+        li.innerHTML = `<div><strong>${s?s.name:'(deleted subject)'}</strong><div class="muted">${b.start}–${b.end}${b.note?` • ${b.note}`:''}</div></div>`;
+        const del=document.createElement('button'); del.textContent='Delete'; del.className='danger';
+        del.onclick=()=>{blocks=blocks.filter(x=>x.id!==b.id); save('sb_blocks',blocks); renderWeek();};
+        li.appendChild(del); ul.appendChild(li);
+      });
+      div.appendChild(ul); container.appendChild(div);
+    });
+  }
+
+  // add subject
+  $('#add-subject').onclick=()=>{
+    const name = $('#subject-name').value.trim();
+    if(!name) return;
+    const color = $('#subject-color').value;
+    subjects.push({id:uid(), name, color});
+    save('sb_subjects', subjects);
+    $('#subject-name').value='';
+    refreshSubjectUI();
+  };
+
+  // add block
+  $('#add-block').onclick=()=>{
+    if(!subjects.length) return alert('Add a subject first.');
+    const day = Number($('#block-day').value)||0;
+    const start = $('#block-start').value; const end = $('#block-end').value;
+    const subjectId = $('#block-subject').value; const note = $('#block-note').value.trim();
+    blocks.push({id:uid(), day, start, end, subjectId, note});
+    save('sb_blocks', blocks); $('#block-note').value=''; renderWeek();
+  };
+
+  // deck rendering
+  function renderDeck(){
+    const deck = $('#deck'); deck.innerHTML='';
+    if(!cards.length){ deck.innerHTML = '<div class="muted">No cards yet. Add a few on the left.</div>'; return; }
+    cards.forEach(c=>{
+      const s = subjects.find(x=>x.id===c.subjectId);
+      const li = document.createElement('div'); li.className='item';
+      li.innerHTML = `<div><div><strong>${c.front}</strong></div><div class="muted">${s?s.name:'(no subject)'} • next: ${c.next||'today'} • level ${c.level||0}</div></div>`;
+      const right = document.createElement('div'); right.className='row';
+      const edit = document.createElement('button'); edit.textContent='Edit';
+      edit.onclick=()=>{
+        const nf = prompt('Front (question/term):', c.front); if(nf===null) return;
+        const nb = prompt('Back (answer/definition):', c.back); if(nb===null) return;
+        c.front = nf.trim(); c.back = nb.trim(); save('sb_cards',cards); renderDeck();
+      };
+      const del = document.createElement('button'); del.textContent='Delete'; del.className='danger';
+      del.onclick=()=>{ if(confirm('Delete this card?')){ cards = cards.filter(x=>x.id!==c.id); save('sb_cards',cards); renderDeck(); }};
+      right.append(edit,del); li.appendChild(right); deck.appendChild(li);
+    });
+  }
+
+  // add card
+  $('#add-card').onclick=()=>{
+    if(!subjects.length) return alert('Add a subject first.');
+    const subjectId = $('#card-subject').value;
+    const front = $('#card-front').value.trim(); const back = $('#card-back').value.trim();
+    if(!front||!back) return;
+    const c = {id:uid(), subjectId, front, back, level:0, next: today(), history:[]};
+    cards = [c, ...cards]; save('sb_cards',cards);
+    $('#card-front').value=''; $('#card-back').value=''; renderDeck(); renderReview();
+  };
+
+  // spaced repetition scheduling
+  function schedule(card, rating){ // rating: 0=again, 1=hard, 2=good, 3=easy
+    const intervals = settings.intervals || DEFAULT_INTERVALS;
+    // simple algorithm: level + rating step (bounded)
+    if(rating===0){ card.level = Math.max(0, (card.level||0)-1); }
+    else if(rating===1){ card.level = Math.max(1, (card.level||0)); }
+    else if(rating===2){ card.level = (card.level||0) + 1; }
+    else if(rating===3){ card.level = (card.level||0) + 2; }
+    const idx = Math.min(card.level, intervals.length-1);
+    const days = intervals[idx];
+    const d = new Date(); d.setDate(d.getDate()+days);
+    card.next = d.toISOString().slice(0,10);
+    card.history.push({on: today(), rating});
+  }
+
+  function dueCards(){
+    const t = today();
+    return cards.filter(c=>!c.next || c.next<=t);
+  }
+
+  function renderReview(){
+    const area = $('#review-area'); const info = $('#due-count');
+    const due = dueCards();
+    info.textContent = due.length ? `${due.length} card(s) due today` : 'Nothing due — add cards or come back later!';
+    area.innerHTML='';
+    if(!due.length) return;
+    const c = due[0];
+    const s = subjects.find(x=>x.id===c.subjectId);
+    const box = document.createElement('div'); box.className='card';
+    box.innerHTML = `
+      <div class="muted">${s?s.name:''} • level ${c.level||0} • next ${c.next||'today'}</div>
+      <h2 style="margin:6px 0">${c.front}</h2>
+      <button id="show-answer">Show answer</button>
+      <div id="answer" class="muted" style="margin-top:10px;display:none">${c.back.replace(/\n/g,'<br>')}</div>
+      <div class="row" style="margin-top:10px;display:none" id="rates">
+        <button data-rate="0">Again</button>
+        <button data-rate="1">Hard</button>
+        <button class="primary" data-rate="2">Good</button>
+        <button data-rate="3">Easy</button>
+      </div>`;
+    area.appendChild(box);
+    box.querySelector('#show-answer').onclick=()=>{
+      box.querySelector('#answer').style.display='block';
+      box.querySelector('#rates').style.display='flex';
+    };
+    box.querySelectorAll('[data-rate]').forEach(b=>b.onclick=()=>{
+      const r = Number(b.dataset.rate); schedule(c,r); save('sb_cards',cards); renderReview(); renderDeck();
+    });
+  }
+
+  // export / import
+  $('#export-data').onclick=()=>{
+    const blob = new Blob([JSON.stringify({subjects,blocks,cards,settings},null,2)],{type:'application/json'});
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href=url; a.download = `studybuddy-${today()}.json`; a.click(); URL.revokeObjectURL(url);
+  };
+  $('#import-file').onchange=e=>{
+    const f=e.target.files?.[0]; if(!f) return; const r=new FileReader();
+    r.onload=()=>{ try{ const data=JSON.parse(r.result);
+      if(data.subjects) subjects=data.subjects; if(data.blocks) blocks=data.blocks; if(data.cards) cards=data.cards; if(data.settings) settings=data.settings;
+      save('sb_subjects',subjects); save('sb_blocks',blocks); save('sb_cards',cards); save('sb_settings',settings);
+      refreshSubjectUI(); refreshDays(); renderWeek(); renderDeck(); renderReview(); alert('Imported!');
+    }catch{ alert('Invalid file.'); } };
+    r.readAsText(f);
+  };
+
+  // pomodoro
+  let pomo = {mode:'idle', total:0, left:0, timer:null};
+  function setPomo(mode, minutes){
+    pomo.mode=mode; pomo.total=minutes*60; pomo.left=pomo.total;
+    $('#pomo-status').textContent=mode; updatePomoUI();
+  }
+  function updatePomoUI(){
+    const mm = String(Math.floor(pomo.left/60)).padStart(2,'0');
+    const ss = String(pomo.left%60).padStart(2,'0');
+    $('#pomo-time').textContent=`${mm}:${ss}`;
+    const pct = pomo.total? (100*(pomo.total-pomo.left)/pomo.total):0;
+    $('#pomo-bar').style.width = pct+'%';
+  }
+  function startPomo(){
+    const focus = Number($('#pomo-focus').value)||25; const brk = Number($('#pomo-break').value)||5;
+    if(pomo.mode==='idle' || pomo.mode==='break') setPomo('focus', focus);
+    clearInterval(pomo.timer);
+    pomo.timer=setInterval(()=>{
+      if(pomo.left>0){ pomo.left--; updatePomoUI(); }
+      else{
+        if(pomo.mode==='focus'){ setPomo('break', brk); }
+        else { setPomo('focus', focus); }
+      }
+    },1000);
+    $('#pomo-status').textContent=pomo.mode;
+  }
+  function stopPomo(){ clearInterval(pomo.timer); pomo.timer=null; pomo.mode='idle'; pomo.total=0; pomo.left=0; updatePomoUI(); $('#pomo-status').textContent='idle'; }
+  $('#pomo-start').onclick=startPomo; $('#pomo-stop').onclick=stopPomo;
+  $('#pomo-focus').value = settings.pomodoro?.focus ?? 25; $('#pomo-break').value = settings.pomodoro?.break ?? 5;
+  $('#pomo-focus').onchange=()=>{ settings.pomodoro=settings.pomodoro||{}; settings.pomodoro.focus=Number($('#pomo-focus').value)||25; save('sb_settings',settings)};
+  $('#pomo-break').onchange=()=>{ settings.pomodoro=settings.pomodoro||{}; settings.pomodoro.break=Number($('#pomo-break').value)||5; save('sb_settings',settings)};
+
+  // init
+  refreshSubjectUI(); refreshDays(); renderWeek(); renderDeck(); renderReview(); updatePomoUI();
+})();
+</script>
+</body>
+</html>
