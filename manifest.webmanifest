@@ -1,0 +1,13 @@
+{
+  "name": "StudyBuddy — Timetable & Flashcards",
+  "short_name": "StudyBuddy",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "description": "Plan your week, focus with Pomodoro, and remember more with spaced repetition. Works offline.",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
